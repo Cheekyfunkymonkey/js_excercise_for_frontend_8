@@ -15,7 +15,7 @@
   //   - numberOfCorrects : 正答数を保持するう
   const gameState = {
     quizzes: [],
-    currentIndex: 1,
+    currentIndex: 0,
     numberOfCorrects: 0
   };
 
@@ -62,11 +62,8 @@
         return response.json();
       })
       .then(data => {
-        for (let prop in data.results) {
-          gameState.quizzes.push(data.results[prop]);
-        }
-        makeQuiz(data.results[0]);
-        return data.results;
+        gameState.quizzes = data.results;
+        makeQuiz(gameState.quizzes[gameState.currentIndex]);
       });
   }
 
@@ -85,9 +82,12 @@
   function setNextQuiz() {
     question.textContent = "";
     removeAllAnswers();
+    const quizIndex = gameState.currentIndex;
+    const quizList = gameState.quizzes;
 
-    if (gameState.currentIndex <= 10) {
-      fetchQuizData();
+    if (quizIndex < quizList.length) {
+      const quiz = quizList[quizIndex];
+      makeQuiz(quiz);
     } else {
       finishQuiz();
     }
@@ -102,9 +102,13 @@
   // - 戻り値
   //   - 無し
   function finishQuiz() {
-    question.textContent = `${gameState.numberOfCorrects}/10 corrects`;
+    question.textContent = `${gameState.numberOfCorrects}/${
+      gameState.quizzes.length
+    } corrects`;
+
     restartButton.style.display = "";
-    gameState.currentIndex = 1;
+    gameState.currentIndex = 0;
+    gameState.numberOfCorrects = 0;
   }
 
   // removeAllAnswers関数を実装する
@@ -139,12 +143,12 @@
     question.textContent = unescapeHTML(quiz.question);
     const shuffledArray = shuffle(combinedAnswers(quiz));
 
-    for (let prop in shuffledArray) {
+    shuffledArray.forEach(value => {
       const answerItem = document.createElement("li");
-      answerItem.textContent = unescapeHTML(shuffledArray[prop]);
+      answerItem.textContent = unescapeHTML(value);
       answers.appendChild(answerItem);
 
-      answerItem.addEventListener("click", () => {
+      answerItem.addEventListener("click", event => {
         if (answerItem.textContent === quiz.correct_answer) {
           gameState.numberOfCorrects++;
           alert("Correct answer!!");
@@ -156,17 +160,17 @@
         gameState.currentIndex++;
         setNextQuiz();
       });
-    }
+    });
   }
 
   // quizオブジェクトの中にあるcorrect_answer, incorrect_answersを結合して
   // 正解・不正解の解答をシャッフルする。
   function combinedAnswers(quiz) {
-    const combinedAnswerArray = [];
-    combinedAnswerArray.push(quiz.correct_answer);
-    for (let prop in quiz.incorrect_answers) {
-      combinedAnswerArray.push(quiz.incorrect_answers[prop]);
-    }
+    const combinedAnswerArray = [
+      quiz.correct_answer,
+      ...quiz.incorrect_answers
+    ];
+
     return combinedAnswerArray;
   }
 
@@ -203,7 +207,7 @@
   //   - 文字列
 
   function unescapeHTML(str) {
-    var div = document.createElement("div");
+    const div = document.createElement("div");
     div.innerHTML = str
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
