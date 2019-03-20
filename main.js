@@ -26,9 +26,9 @@
   const restartButton = document.getElementById("restart-button");
 
   // ページの読み込みが完了したらクイズ情報を取得する
-  window.onload = (() => {
+  window.onload = () => {
     fetchQuizData();
-  })();
+  };
 
   // 「Restart」ボタンをクリックしたら再度クイズデータを取得する
   restartButton.addEventListener("click", () => {
@@ -55,7 +55,7 @@
   function fetchQuizData() {
     question.textContent = "Now loading...";
     result.textContent = "";
-    restartButton.style.display = "none";
+    restartButton.hidden = true;
 
     fetch(API_URL)
       .then(response => {
@@ -106,7 +106,7 @@
       gameState.quizzes.length
     } corrects`;
 
-    restartButton.style.display = "";
+    restartButton.hidden = false;
     gameState.currentIndex = 0;
     gameState.numberOfCorrects = 0;
   }
@@ -141,15 +141,16 @@
   //   - 無し
   function makeQuiz(quiz) {
     question.textContent = unescapeHTML(quiz.question);
-    const shuffledArray = shuffle(combinedAnswers(quiz));
+    const shuffledAnswers = shuffle(combinedAnswers(quiz));
 
-    shuffledArray.forEach(value => {
+    shuffledAnswers.forEach(answer => {
       const answerItem = document.createElement("li");
-      answerItem.textContent = unescapeHTML(value);
+      answerItem.textContent = unescapeHTML(answer);
       answers.appendChild(answerItem);
 
       answerItem.addEventListener("click", event => {
-        if (answerItem.textContent === quiz.correct_answer) {
+        const unescapedCorrectAnswer = unescapeHTML(quiz.correct_answer);
+        if (answerItem.textContent === unescapedCorrectAnswer) {
           gameState.numberOfCorrects++;
           alert("Correct answer!!");
         } else {
