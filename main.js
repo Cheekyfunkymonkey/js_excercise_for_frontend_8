@@ -5,7 +5,7 @@
   //   - 本サイト : https://opentdb.com/
   //   - 利用するAPI : https://opentdb.com/api.php?amount=10&type=multiple
 
-  const API_URL = 'https://opentdb.com/api.php?amount=10&type=multiple';
+  const API_URL = "https://opentdb.com/api.php?amount=10&type=multiple";
 
   // 「gameState」オブジェクトを作る
   // - クイズアプリのデータ管理用オブジェクト
@@ -13,17 +13,27 @@
   //   - quizzes : fetchで取得したクイズデータの配列(resutls)を保持する
   //   - currentIndex : 現在何問目のクイズに取り組んでいるのかをインデックス番号で保持する
   //   - numberOfCorrects : 正答数を保持するう
-
+  const gameState = {
+    quizzes: [],
+    currentIndex: 0,
+    numberOfCorrects: 0
+  };
 
   // HTMLのid値がセットされているDOMを取得する
-
+  const question = document.getElementById("question");
+  const answers = document.getElementById("answers");
+  const result = document.getElementById("result");
+  const restartButton = document.getElementById("restart-button");
 
   // ページの読み込みが完了したらクイズ情報を取得する
-
+  window.onload = () => {
+    fetchQuizData();
+  };
 
   // 「Restart」ボタンをクリックしたら再度クイズデータを取得する
-
-
+  restartButton.addEventListener("click", () => {
+    fetchQuizData();
+  });
 
   // `fetchQuizData関数`を実装する
   // - 実現したいこと
@@ -42,7 +52,20 @@
   //   - 無し
   // - 戻り値
   //   - 無し
+  function fetchQuizData() {
+    question.textContent = "Now loading...";
+    result.textContent = "";
+    restartButton.hidden = true;
 
+    fetch(API_URL)
+      .then(response => {
+        return response.json();
+      })
+      .then(data => {
+        gameState.quizzes = data.results;
+        makeQuiz(gameState.quizzes[gameState.currentIndex]);
+      });
+  }
 
   // setNextQuiz関数を実装する
   // - 実現したいこと
@@ -56,7 +79,19 @@
   //   - 無し
   // - 戻り値
   //   - 無し
+  function setNextQuiz() {
+    question.textContent = "";
+    removeAllAnswers();
+    const quizIndex = gameState.currentIndex;
+    const quizList = gameState.quizzes;
 
+    if (quizIndex < quizList.length) {
+      const quiz = quizList[quizIndex];
+      makeQuiz(quiz);
+    } else {
+      finishQuiz();
+    }
+  }
 
   // finishQuiz関数を実装する
   // - 実現したいこと
@@ -66,7 +101,15 @@
   //   - 無し
   // - 戻り値
   //   - 無し
+  function finishQuiz() {
+    question.textContent = `${gameState.numberOfCorrects}/${
+      gameState.quizzes.length
+    } corrects`;
 
+    restartButton.hidden = false;
+    gameState.currentIndex = 0;
+    gameState.numberOfCorrects = 0;
+  }
 
   // removeAllAnswers関数を実装する
   // - 実現したいこと
@@ -75,7 +118,11 @@
   //   - 無し
   // - 戻り値
   //   - 無し
-
+  function removeAllAnswers() {
+    while (answers.firstChild) {
+      answers.removeChild(answers.firstChild);
+    }
+  }
 
   // makeQuiz関数を実装する
   // - 実現したいこと
@@ -92,11 +139,41 @@
   //   - オブジェクト(クイズデータ1件)
   // - 戻り値無し
   //   - 無し
+  function makeQuiz(quiz) {
+    question.textContent = unescapeHTML(quiz.question);
+    const shuffledAnswers = shuffle(combinedAnswers(quiz));
 
+    shuffledAnswers.forEach(answer => {
+      const answerItem = document.createElement("li");
+      answerItem.textContent = unescapeHTML(answer);
+      answers.appendChild(answerItem);
+
+      answerItem.addEventListener("click", event => {
+        const unescapedCorrectAnswer = unescapeHTML(quiz.correct_answer);
+        if (answerItem.textContent === unescapedCorrectAnswer) {
+          gameState.numberOfCorrects++;
+          alert("Correct answer!!");
+        } else {
+          alert(
+            `Wrong answer... (The correct answer is ${quiz.correct_answer})`
+          );
+        }
+        gameState.currentIndex++;
+        setNextQuiz();
+      });
+    });
+  }
 
   // quizオブジェクトの中にあるcorrect_answer, incorrect_answersを結合して
   // 正解・不正解の解答をシャッフルする。
+  function combinedAnswers(quiz) {
+    const combinedAnswerArray = [
+      quiz.correct_answer,
+      ...quiz.incorrect_answers
+    ];
 
+    return combinedAnswerArray;
+  }
 
   // `shuffle関数` を実装する
   // - 実現したいこと
@@ -108,8 +185,17 @@
   //   - array : 配列
   // - 戻り値
   //   - shffuledArray : シャッフル後の配列(引数の配列とは別の配列であることに注意する)
-
-
+  function shuffle(array) {
+    const shuffledArray = array.slice();
+    for (let i = shuffledArray.length - 1; i >= 0; i--) {
+      let rand = Math.floor(Math.random() * (i + 1));
+      [shuffledArray[i], shuffledArray[rand]] = [
+        shuffledArray[rand],
+        shuffledArray[i]
+      ];
+    }
+    return shuffledArray;
+  }
 
   // unescapeHTML関数を実装する
   // - 実現したいこと
@@ -121,4 +207,15 @@
   // - 戻り値
   //   - 文字列
 
+  function unescapeHTML(str) {
+    const div = document.createElement("div");
+    div.innerHTML = str
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/ /g, "&nbsp;")
+      .replace(/\r/g, "&#13;")
+      .replace(/\n/g, "&#10;");
+
+    return div.textContent || div.innerText;
+  }
 })();
